@@ -43,7 +43,7 @@ class AnswervoterSpider(scrapy.Spider):
     def __init__(self,spider_type='Master',spider_number=0,partition=1,**kwargs):
 
 
-        self.redis4 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=4)
+        self.redis4 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=14)
 
         self.spider_type = str(spider_type)
         self.spider_number = int(spider_number)
@@ -185,7 +185,7 @@ class AnswervoterSpider(scrapy.Spider):
                 res = Selector(text = ''.join(voterList))
 
                 item['answerDataId'] = response.meta['answerDataId']
-                item['answerDataId'] = response.meta['answerDataToken']
+                item['answerDataToken'] = response.meta['answerDataToken']
                 item['offset'] = response.meta['offset']
 
 

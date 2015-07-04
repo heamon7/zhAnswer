@@ -24,7 +24,7 @@ import happybase
 class AnswerInfoPipeline(object):
     def __init__(self):
 
-        self.redis4 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=4)
+        self.redis4 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=14)
         self.redis11 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=11)
 
         connection = happybase.Connection(settings.HBASE_HOST)
@@ -47,6 +47,16 @@ class AnswerInfoPipeline(object):
                     recordTimestamp =result
                 else:
                     recordTimestamp=''
+                #如果赞同数中含有k，需要转换成数字，并且进位
+                try:
+                    answerVoterCount = int(item['answerVoterCount'])
+                except:
+                    resultList = re.split('(\d*)',item['answerVoterCount'])
+                    if resultList[2] =='K':
+                        answerVoterCount = 1000*(int(resultList[1])+1)
+                    else:
+                        answerVoterCount =0
+                        logging.error('Error in answerVoterCount with item[answerVoterCount] %s',item['answerVoterCount'])
 
 
                 #无论之前有无记录，都会更新redis里的数据
@@ -54,7 +64,7 @@ class AnswerInfoPipeline(object):
                 p4.lpush(str(item['answerDataToken'])
                              # ,int(questionId)
                              ,str(item['answerDataId'])
-                             ,str(item['answerVoterCount'])
+                             ,str(answerVoterCount)
                              # 其实commentCount也可以去掉
                              ,str(item['answerCommentCount'])
                              # ,str(isTopQuestion)
@@ -80,7 +90,7 @@ class AnswerInfoPipeline(object):
                                    'detail:answerDataCreated':str(item['answerDataCreated']),
                                    'detail:answerDataDeleted': str(item['answerDataDeleted']),
                                    'detail:answerDataHelpful': str(item['answerDataHelpful']),
-                                   'detail:answerVoterCount': str(item['answerVoterCount']),
+                                   'detail:answerVoterCount': str(answerVoterCount),
                                    'detail:answerDataResourceId': str(item['answerDataResourceId']),
                                    'detail:answerContent': str(item['answerContent'].encode('utf-8')),
                                    'detail:answerCreatedDate': str(item['answerCreatedDate'].encode('utf-8')),
@@ -122,7 +132,7 @@ class AnswerCommentPipeline(object):
 
     def __init__(self):
 
-        self.redis3 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=3)
+        self.redis3 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=13)
         self.redis11 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=11)
         # self.redis12 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=12)
         connection = happybase.Connection(settings.HBASE_HOST)
@@ -184,7 +194,7 @@ class AnswerVoterPipeline(object):
         # self.redis1 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=1)
 
         #redis3存放用户索引，linkid，dataid，index
-        self.redis3 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=3)
+        self.redis3 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=13)
         # #redis4存放用户的基础信息
         # self.redis4 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=4)
         # #redis5存放问题的关注者集合
