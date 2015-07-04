@@ -224,7 +224,7 @@ class AnswercommentSpider(scrapy.Spider):
                         for innerIndex, answerCommentDataIdSet in enumerate(answerCommentDataIdSetList):
 
                             answerTable.put(str(tmpAnswerList[innerIndex]),
-                                              {'answer:dataTokenList': str(list(answerCommentDataIdSet))})
+                                              {'comment:dataTokenList': str(list(answerCommentDataIdSet))})
                         tmpAnswerList=[]
 
 
@@ -233,7 +233,7 @@ class AnswercommentSpider(scrapy.Spider):
                     with  answerTable.batch(batch_size=batchLimit):
                         for innerIndex, answerCommentDataIdSet in enumerate(answerCommentDataIdSetList):
                             answerTable.put(str(tmpAnswerList[innerIndex]),
-                                              {'answer:dataTokenList': str(list(answerCommentDataIdSet))})
+                                              {'comment:dataTokenList': str(list(answerCommentDataIdSet))})
                         tmpAnswerList=[]
             #清空队列
             redis15.rpop(self.name)

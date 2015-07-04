@@ -8,7 +8,7 @@
 import logging
 from scrapy.exceptions import DropItem
 
-from zhQuestion import settings
+from zhAnswer import settings
 import time
 import re
 import redis
@@ -75,13 +75,13 @@ class AnswerInfoPipeline(object):
                 if not recordTimestamp or (int(currentTimestamp)-int(recordTimestamp) > int(settings.UPDATE_PERIOD)):        # the latest record time in hbase
                     recordTimestamp = currentTimestamp
                     answerDetailDict={'detail:questionId':str(questionId),
-                                    'detail:answerDataId':str(item['answerDataAid']),
-                                   'detail:answerDataToken':str(item['answerDataAtoken']),
+                                    'detail:answerDataId':str(item['answerDataId']),
+                                   'detail:answerDataToken':str(item['answerDataToken']),
                                    'detail:answerDataCreated':str(item['answerDataCreated']),
                                    'detail:answerDataDeleted': str(item['answerDataDeleted']),
                                    'detail:answerDataHelpful': str(item['answerDataHelpful']),
                                    'detail:answerVoterCount': str(item['answerVoterCount']),
-                                   'detail:answerDataResourceId': str(item['dataResourceId']),
+                                   'detail:answerDataResourceId': str(item['answerDataResourceId']),
                                    'detail:answerContent': str(item['answerContent'].encode('utf-8')),
                                    'detail:answerCreatedDate': str(item['answerCreatedDate'].encode('utf-8')),
                                    'detail:answerUpdatedDate': str(item['answerUpdatedDate'].encode('utf-8')),
@@ -145,16 +145,16 @@ class AnswerCommentPipeline(object):
                 #无论之前有无记录，都会更新redis里的数据
 
 
-                commentDict={'comment:srcId':str(answerDataToken),
-                                'comment:DataId':str(item['commentDataId']),
-                               'comment:content':str(item['commentContent'].encode('utf-8')),
+                commentDict={'detail:srcId':str(answerDataToken),
+                                'detail:DataId':str(item['commentDataId']),
+                               'detail:content':str(item['commentContent'].encode('utf-8')),
                                 #日期可能含有中文
-                               'comment:date': str(item['commentDate'].encode('utf-8')),
-                               'comment:upCount': str(item['commentUpCount']),
-                               'comment:userName': item['userName'].encode('utf-8'),
-                               'comment:userLinkId': item['userLinkId'].encode('utf-8'),
-                               'comment:userImgLink': str(item['userImgLink']),
-                                'comment:type':'a'
+                               'detail:date': str(item['commentDate'].encode('utf-8')),
+                               'detail:upCount': str(item['commentUpCount']),
+                               'detail:userName': item['userName'].encode('utf-8'),
+                               'detail:userLinkId': item['userLinkId'].encode('utf-8'),
+                               'detail:userImgLink': str(item['userImgLink']),
+                                'detail:type':'a'
                                }
 
 

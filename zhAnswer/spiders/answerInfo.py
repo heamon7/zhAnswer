@@ -155,7 +155,10 @@ class AnswerinfoSpider(scrapy.Spider):
                 offset =str(self.reqLimit*index)
                 reqParams = self.params %(str(questionId),str(self.reqLimit),str(offset))
                 yield FormRequest(url =reqUrl
-                                  ,meta={'params':reqParams,'xsrfValue':xsrfValue,'questionId':questionId,'offset':offset}
+                                  ,meta={'params':reqParams,
+                                         'xsrfValue':xsrfValue,
+                                         'questionId':questionId,
+                                         'offset':offset}
                                   , formdata={
                                         'method':'next'
                                         ,'params':reqParams
@@ -171,7 +174,7 @@ class AnswerinfoSpider(scrapy.Spider):
         if response.status != 200:
             yield FormRequest(url =response.request.url
                                       ,meta={'params':response.meta['params']
-                                             ,'xsrValue':response.meta['xsrfValue']
+                                             ,'xsrfValue':response.meta['xsrfValue']
                                              ,'questionId':response.meta['questionId']
                                              ,'offset':response.meta['offset']}
                                       , formdata={
@@ -208,13 +211,22 @@ class AnswerinfoSpider(scrapy.Spider):
                     item['answerDataHelpful'] = sel.xpath('@data-helpful').extract()[0]
                     item['answerVoterCount'] = sel.xpath('div[@class="zm-votebar"]//span[@class="count"]/text()').extract()[0]
                     #data-resource-id是答案的内容id，和问题的data-resource-id是一致的
-                    item['answerDataResourceId'] = sel.xpath('div[@class="zm-item-rich-text"]/@data-resourceid').extract()[0]
+
                     item['answerContent'] = '\n\n'.join(sel.xpath('div[@class="zm-item-rich-text"]/div[contains(@class,"zm-editable-content")]/text()').extract())
+
+                    #可能是被建议修改的回答
+                    try:
+                        item['answerDataResourceId'] = sel.xpath('div[@class="zm-item-rich-text"]/@data-resourceid').extract()[0]
+                    except:
+                        item['answerDataResourceId'] =''
+                        logging.error('Error in answerDataResourceId with QuestionId: %s ,AnswerDataToken: %s ',str(item['questionId']),str(item['answerDataToken']))
                     # 注意userLinkId中可能有中文
                     try:
                         item['answerCreatedDate'] = sel.xpath('div[contains(@class,"zm-item-comment-el")]//a[contains(@class,"answer-date-link")]/@data-tip').re(r'([\-0-9\:]+)')[0]
                     except:
+
                         item['answerCreatedDate'] = ''
+
                     try:
                         item['answerUpdatedDate'] = sel.xpath('div[contains(@class,"zm-item-comment-el")]//a[contains(@class,"answer-date-link")]/text()').re(r'([\-0-9\:]+)')[0]
                     except Exception,e:

@@ -14,6 +14,8 @@ import happybase
 import requests
 import logging
 
+import numpy as np
+
 from zhAnswer import settings
 from zhAnswer.items import AnswerVoterItem
 
@@ -68,15 +70,15 @@ class AnswervoterSpider(scrapy.Spider):
                 self.answerDataTokenList = self.answerDataTokenList[self.spider_number*totalLength/self.partition:(self.spider_number+1)*totalLength/self.partition]
                 totalLength = len(self.answerDataTokenList)
                 for index ,answerDataToken in enumerate(self.answerDataTokenList):
-                    p4.range(str(answerDataToken),3,4)
+                    p4.lrange(str(answerDataToken),3,4)
                     if (index+1)%self.pipelineLimit ==0:
-                        result = p4.execute()
-                        self.answerVoterCountList.extend(result[::2])
-                        self.answerDataIdList.extend(result[1::2])
+                        result = np.array(p4.execute())
+                        self.answerVoterCountList.extend(list(result[:,0]))
+                        self.answerDataIdList.extend(list(result[:,1]))
                     elif totalLength-index==1:
-                        result = p4.execute()
-                        self.answerVoterCountList.extend(result[::2])
-                        self.answerDataIdList.extend(result[1::2])
+                        result = np.array(p4.execute())
+                        self.answerVoterCountList.extend(list(result[:,0]))
+                        self.answerDataIdList.extend(list(result[:,1]))
 
                 for index in range(1,self.partition):
                     payload ={
@@ -93,15 +95,15 @@ class AnswervoterSpider(scrapy.Spider):
             else:
                 logging.warning('Master  partition is '+str(self.partition))
                 for index ,answerDataToken in enumerate(self.answerDataTokenList):
-                    p4.range(str(answerDataToken),3,4)
+                    p4.lrange(str(answerDataToken),3,4)
                     if (index+1)%self.pipelineLimit ==0:
-                        result = p4.execute()
-                        self.answerVoterCountList.extend(result[::2])
-                        self.answerDataIdList.extend(result[1::2])
+                        result = np.array(p4.execute())
+                        self.answerVoterCountList.extend(list(result[:,0]))
+                        self.answerDataIdList.extend(list(result[:,1]))
                     elif totalLength-index==1:
-                        result = p4.execute()
-                        self.answerVoterCountList.extend(result[::2])
-                        self.answerDataIdList.extend(result[1::2])
+                        result = np.array(p4.execute())
+                        self.answerVoterCountList.extend(list(result[:,0]))
+                        self.answerDataIdList.extend(list(result[:,1]))
 
         elif self.spider_type =='Slave':
             logging.warning('Slave spider_type is '+self.spider_type)
@@ -110,30 +112,30 @@ class AnswervoterSpider(scrapy.Spider):
                 self.answerDataTokenList = self.answerDataTokenList[self.spider_number*totalLength/self.partition:(self.spider_number+1)*totalLength/self.partition]
                 totalLength = len(self.answerDataTokenList)
                 for index ,answerDataToken in enumerate(self.answerDataTokenList):
-                    p4.range(str(answerDataToken),3,4)
+                    p4.lrange(str(answerDataToken),3,4)
                     if (index+1)%self.pipelineLimit ==0:
-                        result = p4.execute()
-                        self.answerVoterCountList.extend(result[::2])
-                        self.answerDataIdList.extend(result[1::2])
+                        result = np.array(p4.execute())
+                        self.answerVoterCountList.extend(list(result[:,0]))
+                        self.answerDataIdList.extend(list(result[:,1]))
                     elif totalLength-index==1:
-                        result = p4.execute()
-                        self.answerVoterCountList.extend(result[::2])
-                        self.answerDataIdList.extend(result[1::2])
+                        result = np.array(p4.execute())
+                        self.answerVoterCountList.extend(list(result[:,0]))
+                        self.answerDataIdList.extend(list(result[:,1]))
 
 
             else:
                 self.answerDataTokenList = self.answerDataTokenList[self.spider_number*totalLength/self.partition:]
                 totalLength = len(self.answerDataTokenList)
                 for index ,answerDataToken in enumerate(self.answerDataTokenList):
-                    p4.range(str(answerDataToken),3,4)
+                    p4.lrange(str(answerDataToken),3,4)
                     if (index+1)%self.pipelineLimit ==0:
-                        result = p4.execute()
-                        self.answerVoterCountList.extend(result[::2])
-                        self.answerDataIdList.extend(result[1::2])
+                        result = np.array(p4.execute())
+                        self.answerVoterCountList.extend(list(result[:,0]))
+                        self.answerDataIdList.extend(list(result[:,1]))
                     elif totalLength-index==1:
-                        result = p4.execute()
-                        self.answerVoterCountList.extend(result[::2])
-                        self.answerDataIdList.extend(result[1::2])
+                        result = np.array(p4.execute())
+                        self.answerVoterCountList.extend(list(result[:,0]))
+                        self.answerDataIdList.extend(list(result[:,1]))
 
         else:
             logging.warning('spider_type is:'+str(self.spider_type)+'with type of '+str(type(self.spider_type)))
