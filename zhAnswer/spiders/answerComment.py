@@ -42,7 +42,7 @@ class AnswercommentSpider(scrapy.Spider):
     def __init__(self,spider_type='Master',spider_number=0,partition=1,**kwargs):
 
         # 这里需要获取所有Answer的id
-        self.redis4 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=14)
+        self.redis4 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=4)
 
         self.spider_type = str(spider_type)
         self.spider_number = int(spider_number)
