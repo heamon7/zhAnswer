@@ -43,11 +43,19 @@ class AnswerinfoSpider(scrapy.Spider):
         # redis2 以list的形式存储有所有问题的id和问题的info，包括answerCount
         self.redis2 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=2)
 
-        self.spider_type = str(spider_type)
-        self.spider_number = int(spider_number)
-        self.partition = int(partition)
-        self.email= settings.EMAIL_LIST[self.spider_number]
-        self.password=settings.PASSWORD_LIST[self.spider_number]
+        try:
+            self.spider_type = str(spider_type)
+            self.spider_number = int(spider_number)
+            self.partition = int(partition)
+            self.email= settings.EMAIL_LIST[self.spider_number]
+            self.password=settings.PASSWORD_LIST[self.spider_number]
+
+        except:
+            self.spider_type = 'Master'
+            self.spider_number = 0
+            self.partition = 1
+            self.email= settings.EMAIL_LIST[self.spider_number]
+            self.password=settings.PASSWORD_LIST[self.spider_number]
 
     def start_requests(self):
 
@@ -122,29 +130,38 @@ class AnswerinfoSpider(scrapy.Spider):
         logging.warning('start_requests ing ......')
         logging.warning('totalCount to request is :'+str(len(self.questionIdList)))
         logging.warning('totalCount questionAnswerCountList to request is :'+str(len(self.questionAnswerCountList)))
-        yield Request("http://www.zhihu.com/",callback = self.post_login)
-
-    def post_login(self,response):
-
-        logging.warning('post_login ing ......')
-        xsrfValue = response.xpath('/html/body/input[@name= "_xsrf"]/@value').extract()[0]
-        yield FormRequest.from_response(response,
-                                          formdata={
-                                              '_xsrf':xsrfValue,
-                                              'email':self.email,
-                                              'password':self.password,
-                                              'rememberme': 'y'
-                                          },
-                                          dont_filter = True,
-                                          callback = self.after_login,
-                                          )
+        # yield Request("http://www.zhihu.com/",callback = self.post_login)
+        yield Request(url ='http://www.zhihu.com',
+                      cookies=settings.COOKIES_LIST[self.spider_number],
+                      callback =self.after_login)
+    # def post_login(self,response):
+    #
+    #     logging.warning('post_login ing ......')
+    #     xsrfValue = response.xpath('/html/body/input[@name= "_xsrf"]/@value').extract()[0]
+    #     yield FormRequest.from_response(response,
+    #                                       formdata={
+    #                                           '_xsrf':xsrfValue,
+    #                                           'email':self.email,
+    #                                           'password':self.password,
+    #                                           'rememberme': 'y'
+    #                                       },
+    #                                       dont_filter = True,
+    #                                       callback = self.after_login,
+    #                                       )
 
     def after_login(self,response):
+        # try:
+        #     loginUserLink = response.xpath('//div[@id="zh-top-inner"]/div[@class="top-nav-profile"]/a/@href').extract()[0]
+        #     logging.warning('Successfully login with %s  %s  %s',str(loginUserLink),str(self.email),str(self.password))
+        # except:
+        #     logging.error('Login failed! %s   %s',self.email,self.password)
         try:
             loginUserLink = response.xpath('//div[@id="zh-top-inner"]/div[@class="top-nav-profile"]/a/@href').extract()[0]
-            logging.warning('Successfully login with %s  %s  %s',str(loginUserLink),str(self.email),str(self.password))
+            # logging.warning('Successfully login with %s  %s  %s',str(loginUserLink),str(self.email),str(self.password))
+            logging.warning('Successfully login with %s  ',str(loginUserLink))
+
         except:
-            logging.error('Login failed! %s   %s',self.email,self.password)
+            logging.error('Login failed! %s',self.email)
 
         for index ,questionId in enumerate(self.questionIdList):
 
