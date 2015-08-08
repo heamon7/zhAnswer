@@ -14,7 +14,7 @@ import happybase
 import requests
 import logging
 
-import numpy as np
+# import numpy as np
 
 from zhAnswer import settings
 from zhAnswer.items import AnswerVoterItem
