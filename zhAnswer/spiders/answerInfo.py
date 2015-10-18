@@ -256,7 +256,7 @@ class AnswerinfoSpider(scrapy.Spider):
                         item['answerDataResourceId'] = sel.xpath('div[@class="zm-item-rich-text"]/@data-resourceid').extract()[0]
                     except:
                         item['answerDataResourceId'] =''
-                        logging.error('Error in answerDataResourceId with QuestionId: %s ,AnswerDataToken: %s ',str(item['questionId']),str(item['answerDataToken']))
+                        logging.error('Error in answerDataResourceId with QuestionId: %s , AnswerDataId: %s, AnswerDataToken: %s ',str(item['questionId']),str(item['answerDataId']),str(item['answerDataToken']))
                     # 注意userLinkId中可能有中文
                     try:
                         item['answerCreatedDate'] = sel.xpath('div[contains(@class,"zm-item-comment-el")]//a[contains(@class,"answer-date-link")]/@data-tip').re(r'([\-0-9\:]+)')[0]
@@ -268,9 +268,11 @@ class AnswerinfoSpider(scrapy.Spider):
                         item['answerUpdatedDate'] = sel.xpath('div[contains(@class,"zm-item-comment-el")]//a[contains(@class,"answer-date-link")]/text()').re(r'([\-0-9\:]+)')[0]
                     except Exception,e:
                         item['answerUpdatedDate'] = ''
-                        logging.error('Error in item[answerUpdatedDate] %s',str(e))
+                        logging.error('Error in answerUpdatedDate with QuestionId: %s , AnswerDataId: %s, AnswerDataToken: %s ',str(item['questionId']),str(item['answerDataId']),str(item['answerDataToken']))
                     try:
-                        item['answerCommentCount'] = sel.xpath('div[contains(@class,"zm-item-comment-el")]//a[@name="addcomment"]/text')[1].re(r'(\d*)')[0]
+                        item['answerCommentCount'] = sel.xpath('div[contains(@class,"zm-item-comment-el")]//a[@name="addcomment"]/text()').re(r'(\d*)')[0]
+                        if not item['answerCommentCount']:
+                            item['answerCommentCount'] =0
                     except:
                         item['answerCommentCount'] =0
 
