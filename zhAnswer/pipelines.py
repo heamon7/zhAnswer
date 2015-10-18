@@ -47,7 +47,7 @@ class AnswerInfoPipeline(object):
                 except:
                     resultList = re.split('(\d*)',item['answerVoterCount'])
                     if resultList[2] =='K':
-                        answerVoterCount = 1000*(int(resultList[1])+1)
+                        answerVoterCount = 1000*(int(resultList[1]))
                     else:
                         answerVoterCount =0
                         logging.error('Error in answerVoterCount with item[answerVoterCount] %s',item['answerVoterCount'])

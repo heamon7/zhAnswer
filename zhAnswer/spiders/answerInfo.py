@@ -274,7 +274,12 @@ class AnswerinfoSpider(scrapy.Spider):
                         if not item['answerCommentCount']:
                             item['answerCommentCount'] =0
                     except:
-                        item['answerCommentCount'] =0
+                        try:
+                            item['answerCommentCount'] = sel.xpath('div[contains(@class,"zm-item-comment-el")]//a[@name="addcomment"]/text()')[1].re(r'(\d*)')[0]
+                            if not item['answerCommentCount']:
+                                item['answerCommentCount'] =0
+                        except:
+                            item['answerCommentCount'] =0
 
                           #这些信息并不需要
                     try:
