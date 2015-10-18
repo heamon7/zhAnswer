@@ -17,6 +17,7 @@ import logging
 from zhAnswer import settings
 
 from zhAnswer.items import AnswerInfoItem
+from pymongo import MongoClient
 
 
 
@@ -37,25 +38,43 @@ class AnswerinfoSpider(scrapy.Spider):
     threhold = 100
     handle_httpstatus_list = [401,429,500,502,504]
     params= '{"url_token":%s,"pagesize":%s,"offset":%s}'
+    QUES_ANSWER_COUNT_INDEX = settings.QUES_ANSWER_COUNT_INDEX
 
-    def __init__(self,spider_type='Master',spider_number=0,partition=1,**kwargs):
+    def __init__(self,stats,spider_type='Master',spider_number=0,partition=1,**kwargs):
+        self.stats = stats
 
         # redis2 以list的形式存储有所有问题的id和问题的info，包括answerCount
-        self.redis2 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=2)
+        self.redis2 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=settings.QUESTION_INFO_REDIS_DB_NUMBER)
+        self.client = MongoClient(settings.MONGO_URL)
+        self.db = self.client['zhihu']
+        self.col_log = self.db['log']
 
+        crawler_log = {'project':settings.BOT_NAME,
+                       'spider':self.name,
+                       'spider_type':spider_type,
+                       'spider_number':spider_number,
+                       'partition':partition,
+                       'type':'start',
+                       'updated_at':datetime.datetime.now()}
+
+        self.col_log.insert_one(crawler_log)
         try:
             self.spider_type = str(spider_type)
             self.spider_number = int(spider_number)
             self.partition = int(partition)
-            self.email= settings.EMAIL_LIST[self.spider_number]
-            self.password=settings.PASSWORD_LIST[self.spider_number]
+            # self.email= settings.EMAIL_LIST[self.spider_number]
+            # self.password=settings.PASSWORD_LIST[self.spider_number]
 
         except:
             self.spider_type = 'Master'
             self.spider_number = 0
             self.partition = 1
-            self.email= settings.EMAIL_LIST[self.spider_number]
-            self.password=settings.PASSWORD_LIST[self.spider_number]
+            # self.email= settings.EMAIL_LIST[self.spider_number]
+            # self.password=settings.PASSWORD_LIST[self.spider_number]
+
+    @classmethod
+    def from_crawler(cls, crawler,spider_type='Master',spider_number=0,partition=1,**kwargs):
+        return cls(crawler.stats,spider_type=spider_type,spider_number=spider_number,partition=partition)
 
     def start_requests(self):
 
@@ -63,6 +82,7 @@ class AnswerinfoSpider(scrapy.Spider):
         totalLength = len(self.questionIdList)
 
         p2 = self.redis2.pipeline()
+        # cursor = self.db['questionInfo'].find()
 
         if self.spider_type=='Master':
             redis11 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=11)
@@ -73,7 +93,7 @@ class AnswerinfoSpider(scrapy.Spider):
                 self.questionIdList = self.questionIdList[self.spider_number*totalLength/self.partition:(self.spider_number+1)*totalLength/self.partition]
                 totalLength = len(self.questionIdList)
                 for index ,questionId in enumerate(self.questionIdList):
-                    p2.lindex(str(questionId),2)
+                    p2.lindex(str(questionId),self.QUES_ANSWER_COUNT_INDEX)
                     if (index+1)%self.pipelineLimit ==0:
                         self.questionAnswerCountList.extend(p2.execute())
                     elif totalLength-index==1:
@@ -94,7 +114,7 @@ class AnswerinfoSpider(scrapy.Spider):
             else:
                 logging.warning('Master  partition is '+str(self.partition))
                 for index ,questionId in enumerate(self.questionIdList):
-                    p2.lindex(str(questionId),2)
+                    p2.lindex(str(questionId),self.QUES_ANSWER_COUNT_INDEX)
                     if (index+1)%self.pipelineLimit ==0:
                         self.questionAnswerCountList.extend(p2.execute())
                     elif totalLength-index==1:
@@ -107,7 +127,7 @@ class AnswerinfoSpider(scrapy.Spider):
                 self.questionIdList = self.questionIdList[self.spider_number*totalLength/self.partition:(self.spider_number+1)*totalLength/self.partition]
                 totalLength = len(self.questionIdList)
                 for index ,questionId in enumerate(self.questionIdList):
-                    p2.lindex(str(questionId),2)
+                    p2.lindex(str(questionId),self.QUES_ANSWER_COUNT_INDEX)
                     if (index+1)%self.pipelineLimit ==0:
                         self.questionAnswerCountList.extend(p2.execute())
                     elif totalLength-index==1:
@@ -118,7 +138,7 @@ class AnswerinfoSpider(scrapy.Spider):
                 self.questionIdList = self.questionIdList[self.spider_number*totalLength/self.partition:]
                 totalLength = len(self.questionIdList)
                 for index ,questionId in enumerate(self.questionIdList):
-                    p2.lindex(str(questionId),2)
+                    p2.lindex(str(questionId),self.QUES_ANSWER_COUNT_INDEX)
                     if (index+1)%self.pipelineLimit ==0:
                         self.questionAnswerCountList.extend(p2.execute())
                     elif totalLength-index==1:
@@ -283,61 +303,76 @@ class AnswerinfoSpider(scrapy.Spider):
     #
     def closed(self,reason):
 
-        redis15 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=15)
-        redis11 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=11)
+        self.client = MongoClient(settings.MONGO_URL)
+        self.db = self.client['zhihu']
+        self.col_log = self.db['log']
 
+        crawler_log = {'project':settings.BOT_NAME,
+                       'spider':self.name,
+                       'spider_type':self.spider_type,
+                       'spider_number':self.spider_number,
+                       'partition':self.partition,
+                       'type':'close',
+                       'stats':self.stats.get_stats(),
+                       'updated_at':datetime.datetime.now()}
 
-        #这样的顺序是为了防止两个几乎同时结束
-        p15=redis15.pipeline()
-        p15.lpush(str(self.name),self.spider_number)
-        p15.llen(str(self.name))
-        finishedCount= p15.execute()[1]
-        pipelineLimit = 100000
-        batchLimit = 1000
+        self.col_log.insert_one(crawler_log)
 
-        if int(self.partition)==int(finishedCount):
-            #删除其他标记
-            redis15.ltrim(str(self.name),0,0)
-
-            connection = happybase.Connection(settings.HBASE_HOST)
-            questionTable = connection.table('question')
-
-            questionIdList = redis11.keys()
-            p11 = redis11.pipeline()
-            tmpQuestionList = []
-            totalLength = len(questionIdList)
-
-            for index, questionId in enumerate(questionIdList):
-                p11.smembers(str(questionId))
-                tmpQuestionList.append(str(questionId))
-
-                if (index + 1) % pipelineLimit == 0:
-                    questionAnswerDataTokenSetList = p11.execute()
-                    with  questionTable.batch(batch_size=batchLimit):
-                        for innerIndex, questionAnswerDataTokenSet in enumerate(questionAnswerDataTokenSetList):
-
-                            questionTable.put(str(tmpQuestionList[innerIndex]),
-                                              {'answer:dataTokenList': str(list(questionAnswerDataTokenSet))})
-                        tmpQuestionList=[]
-
-
-                elif  totalLength - index == 1:
-                    questionAnswerDataTokenSetList = p11.execute()
-                    with  questionTable.batch(batch_size=batchLimit):
-                        for innerIndex, questionAnswerDataTokenSet in enumerate(questionAnswerDataTokenSetList):
-
-                            questionTable.put(str(tmpQuestionList[innerIndex]),
-                                              {'answer:dataTokenList': str(list(questionAnswerDataTokenSet))})
-                        tmpQuestionList=[]
-            #清空队列
-            redis15.rpop(self.name)
-            #清空缓存数据的redis11数据库
-            redis11.flushdb()
-
-            payload=settings.NEXT_SCHEDULE_PAYLOAD
-            logging.warning('Begin to request next schedule')
-            response = requests.post('http://'+settings.NEXT_SCHEDULE_SCRAPYD_HOST+':'+settings.NEXT_SCHEDULE_SCRAPYD_PORT+'/schedule.json',data=payload)
-            logging.warning('Response: '+' '+str(response))
-        logging.warning('finished close.....')
+        # redis15 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=15)
+        # redis11 = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD,db=11)
+        #
+        #
+        # #这样的顺序是为了防止两个几乎同时结束
+        # p15=redis15.pipeline()
+        # p15.lpush(str(self.name),self.spider_number)
+        # p15.llen(str(self.name))
+        # finishedCount= p15.execute()[1]
+        # pipelineLimit = 100000
+        # batchLimit = 1000
+        #
+        # if int(self.partition)==int(finishedCount):
+        #     #删除其他标记
+        #     redis15.ltrim(str(self.name),0,0)
+        #
+        #     connection = happybase.Connection(settings.HBASE_HOST)
+        #     questionTable = connection.table('question')
+        #
+        #     questionIdList = redis11.keys()
+        #     p11 = redis11.pipeline()
+        #     tmpQuestionList = []
+        #     totalLength = len(questionIdList)
+        #
+        #     for index, questionId in enumerate(questionIdList):
+        #         p11.smembers(str(questionId))
+        #         tmpQuestionList.append(str(questionId))
+        #
+        #         if (index + 1) % pipelineLimit == 0:
+        #             questionAnswerDataTokenSetList = p11.execute()
+        #             with  questionTable.batch(batch_size=batchLimit):
+        #                 for innerIndex, questionAnswerDataTokenSet in enumerate(questionAnswerDataTokenSetList):
+        #
+        #                     questionTable.put(str(tmpQuestionList[innerIndex]),
+        #                                       {'answer:dataTokenList': str(list(questionAnswerDataTokenSet))})
+        #                 tmpQuestionList=[]
+        #
+        #
+        #         elif  totalLength - index == 1:
+        #             questionAnswerDataTokenSetList = p11.execute()
+        #             with  questionTable.batch(batch_size=batchLimit):
+        #                 for innerIndex, questionAnswerDataTokenSet in enumerate(questionAnswerDataTokenSetList):
+        #
+        #                     questionTable.put(str(tmpQuestionList[innerIndex]),
+        #                                       {'answer:dataTokenList': str(list(questionAnswerDataTokenSet))})
+        #                 tmpQuestionList=[]
+        #     #清空队列
+        #     redis15.rpop(self.name)
+        #     #清空缓存数据的redis11数据库
+        #     redis11.flushdb()
+        #
+        #     payload=settings.NEXT_SCHEDULE_PAYLOAD
+        #     logging.warning('Begin to request next schedule')
+        #     response = requests.post('http://'+settings.NEXT_SCHEDULE_SCRAPYD_HOST+':'+settings.NEXT_SCHEDULE_SCRAPYD_PORT+'/schedule.json',data=payload)
+        #     logging.warning('Response: '+' '+str(response))
+        # logging.warning('finished close.....')
 
 
