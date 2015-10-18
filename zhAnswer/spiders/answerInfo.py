@@ -6,7 +6,7 @@ from scrapy.http import Request,FormRequest
 from scrapy.selector import Selector
 from scrapy.shell import inspect_response
 
-from datetime import datetime
+import datetime
 import re
 import json
 import redis
